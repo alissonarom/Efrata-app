@@ -550,12 +550,12 @@ export type TBancoCadastro = {
 };
 
 export type TCentrosCusto = {
-    id_centro_custos: number,
-    desc_centro_custos: string,
-    status_centro_custos: string,
-    data_cad_centro: any,
-    data_mod_centro: any,
-    lixeira: Lixeira_pedido
+    id_centro_custos?: number,
+    desc_centro_custos?: string,
+    status_centro_custos?: string,
+    data_cad_centro?: any,
+    data_mod_centro?: any,
+    lixeira?: Lixeira_pedido
 };
 
 export type TContaReceber = {
@@ -573,10 +573,10 @@ export type TContaReceber = {
     observacoes_rec?: string,
     id_centro_custos?: number,
     centro_custos_rec?: string,
-    liquidado_rec : Liquidado,
-    data_pagamento : string | null,
-    obs_pagamento : string | null,
-    forma_pagamento : string,
+    liquidado_rec?: Liquidado,
+    data_pagamento?: string | null,
+    obs_pagamento?: string | null,
+    forma_pagamento?: string,
     tipo_conta?: string,
     valor_juros?: string,
     valor_desconto?: string,

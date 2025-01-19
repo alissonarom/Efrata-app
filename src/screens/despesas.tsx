@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { TDespesas, DespesasScreenPorps, TBancoCadastro, RootStackParamList, TCentrosCusto } from "../../src/types/index";
 import { Button, Card, TextInput, Snackbar, ActivityIndicator, Checkbox  } from 'react-native-paper';
@@ -9,8 +9,10 @@ import {Picker} from '@react-native-picker/picker';
 import { useRoute, RouteProp } from '@react-navigation/native';
 // utils
 import { truncateText, dataFormaPagamento, formatDate, formatarValor, headers } from "../utils";
+import { PedidosContext } from "../utils/PedidoContext";
 
 export default function Despesas({navigation}:DespesasScreenPorps) {
+    const pedidosContext = useContext(PedidosContext);
     const [checked, setChecked] = useState(false);
     const [visible, setVisible] = useState(false);
     
@@ -51,7 +53,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
 
     useEffect(() => {
         getContaBancaria();
-        getCentroCusto();
+        pedidosContext?.atualizarCentroCusto();
     }, []);
 
     //GET conta bancaria
@@ -72,29 +74,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
         }
         // setDataProdutos(dataProdutoMock);
     };
-    const getCentroCusto = async () => {
-        setLoading(true);
-        
-        try {
-          const response = await fetch('/api/centros-custo', {
-            method: 'GET',
-            headers,
-          });
-      
-          const json = await response.json();
-
-          if (json.data === "Nenhum centro de custo encontrado!") {
-            setDataCentroCusto([]); // Define como uma lista vazia
-          } else {
-            setDataCentroCusto(json.data); // Define com os dados recebidos
-          }
-        } catch (error) {
-          console.error('Erro:', error);
-        } finally {
-          setLoading(false);
-        }
-        // setDataProdutos(dataProdutoMock);
-    };
+    
     const handleChangeTextJurosMulta = (texto: any) => {
         const valorFormatado = formatarValor(texto);
         setJurosMulta(valorFormatado)
@@ -208,22 +188,22 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                             <Picker
                                 dropdownIconColor="#9E9E9E"
                                 placeholder="Centro de custo"
-                                style={[styles.selectPicker, {height: 50,}]}
+                                style={[styles.selectPicker, {height: 50, maxWidth: '50%'}]}
                                 selectedValue={centroCusto?.desc_centro_custos}
                                 onValueChange={(itemValue, itemIndex) => {
-                                    const selectedItem = dataCentroCusto[itemIndex - 1];
-                                    setCentroCusto(selectedItem || null);
+                                    const selectedItem = pedidosContext?.centroCusto[itemIndex - 1];
+                                    setCentroCusto(selectedItem);
                                 }}
                             >
                                 <Picker.Item label="Centro de custo" />
-                                {dataCentroCusto.map((item) => {
+                                {pedidosContext?.centroCusto.map((item) => {
                                     return <Picker.Item label={item.desc_centro_custos} value={item.desc_centro_custos} key={item.id_centro_custos} />;
                                 })}
                             </Picker>
                             <Picker
                                 dropdownIconColor="#9E9E9E"
                                 placeholder="Forma de pagamento"
-                                style={[styles.selectPicker, {height: 50,}]}
+                                style={[styles.selectPicker, {height: 50, maxWidth: '50%'}]}
                                 selectedValue={formaPagamento}
                                 onValueChange={(itemValue) => { setFormaPagamento(itemValue); } }
                             >

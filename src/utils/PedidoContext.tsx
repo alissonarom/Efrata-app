@@ -1,6 +1,6 @@
 // PedidosContext.tsx
 import React, { createContext, useState, ReactNode } from 'react';
-import { TPedido, TParcelas, TProdutoPedido, TOrcamentoResponse } from "../types";
+import { TPedido, TParcelas, TProdutoPedido, TOrcamentoResponse, TCentrosCusto, TContaReceber } from "../types";
 import { headers } from "../utils"
 
 interface PedidosContextProps {
@@ -9,13 +9,19 @@ interface PedidosContextProps {
   orcamentos: TOrcamentoResponse[];
   atualizarOrcamentos: (cliente: number, vendedor: number) => void;
   isLoading: boolean;
+  atualizarContasReceber: (cliente: number)=>void;
+  contas: TContaReceber[];
+  atualizarCentroCusto: ()=>void;
+  centroCusto: TCentrosCusto[];
 }
 
 export const PedidosContext = createContext<PedidosContextProps | undefined>(undefined);
 
 export const PedidosProvider = ({ children }: { children: ReactNode }) => {
   const [pedidos, setPedidos] = useState<TPedido[]>([]);
+  const [contas, setContas] = useState<TContaReceber[]>([]);
   const [orcamentos, setOrcamentos] = useState<TOrcamentoResponse[]>([]);
+  const [centroCusto, setCentroCusto] = useState<TCentrosCusto[]>([]);
   const [isLoading, setLoading] = useState(false);
 
   const atualizarPedidos = async (cliente: number, vendedor: number) => {
@@ -83,20 +89,20 @@ export const PedidosProvider = ({ children }: { children: ReactNode }) => {
       console.error('Erro:', error);
     }
   };
-
+  
   const atualizarOrcamentos = async (cliente: number, vendedor: number) => {
     try {
       const response = await fetch('/api/orcamentos', {
         method: 'GET',
         headers,
       });
-
+      
       const json = await response.json();
-
+      
       const orcamentosFiltrados = json.data.filter((orcamento: any) => 
         orcamento.vendedor_pedido_id === vendedor && orcamento.id_cliente === cliente && orcamento.status_pedido === "Em Aberto" && orcamento.lixeira === "Nao"
       );
-
+      
       const orcamentosComDetalhes = await Promise.all(
         orcamentosFiltrados.map(async (orcamento: any) => {
           // Buscar produtos do pedido
@@ -114,7 +120,7 @@ export const PedidosProvider = ({ children }: { children: ReactNode }) => {
           });
           const parcelasJson = await parcelasResponse.json();
           const parcelas: TParcelas[] = parcelasJson.data;
-
+          
           // Retornar o pedido com os produtos e parcelas
           return {
             ...orcamento,
@@ -131,8 +137,81 @@ export const PedidosProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const atualizarContasReceber = async (cliente: number) => {
+    setLoading(true)
+      let allContasReceber: TContaReceber[] = [];
+      let offset = 0;
+      const limit = 250;
+  try {
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = await fetch(`/api/contas-receber?offset=${offset}&limit=${limit}`, {
+        method: 'GET',
+        headers,
+      });
+
+      const json = await response.json();
+      
+      // Adicionar clientes da página atual ao array total
+      allContasReceber = [...allContasReceber, ...json.data];
+
+      // Verificar se há mais clientes para buscar
+      const { total, offset: currentOffset, total_count } = json.paging;
+      offset = currentOffset + total_count;
+
+      // Se o total de clientes obtidos for igual ao total disponível, parar a busca
+      hasMore = allContasReceber.length < total;
+    }
+    
+    const contasFiltradas = allContasReceber.filter((conta: any) => 
+      conta.id_cliente === cliente && conta.liquidado_rec === "Nao" && conta.lixeira === "Nao"
+    );
+
+    setLoading(false)
+    setContas(contasFiltradas);
+  } catch (error) {
+    console.error('Erro:', error);
+  }
+  };
+
+  const atualizarCentroCusto = async () => {
+    setLoading(true)
+      let allCentroCusto: TCentrosCusto[] = [];
+      let offset = 0;
+      const limit = 250;
+  try {
+    let hasMore = true;
+
+    while (hasMore) {
+          const response = await fetch('/api/centros-custo', {
+            method: 'GET',
+            headers,
+          });
+
+      const json = await response.json();
+      
+      // Adicionar clientes da página atual ao array total
+      allCentroCusto = [...allCentroCusto, ...json.data];
+
+      // Verificar se há mais clientes para buscar
+      const { total, offset: currentOffset, total_count } = json.paging;
+      offset = currentOffset + total_count;
+
+      // Se o total de clientes obtidos for igual ao total disponível, parar a busca
+      hasMore = allCentroCusto.length < total;
+    }
+
+    setCentroCusto(allCentroCusto); // Define com os dados recebidos
+    setLoading(false)
+    }
+  catch (error) {
+    console.error('Erro:', error);
+  }
+  };
+
   return (
-    <PedidosContext.Provider value={{ pedidos, atualizarPedidos, orcamentos, atualizarOrcamentos, isLoading }}>
+    <PedidosContext.Provider value={{ pedidos, atualizarPedidos, orcamentos, atualizarOrcamentos, isLoading, atualizarContasReceber, contas, atualizarCentroCusto, centroCusto  }}>
       {children}
     </PedidosContext.Provider>
   );
