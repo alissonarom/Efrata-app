@@ -1,11 +1,10 @@
 import { useContext, useEffect, useState } from "react";
-import { View, Text, ScrollView } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, FlatList } from "react-native";
 import { Liquidado, NovoPedidoScreenPorps, TBancoCadastro, TCategoFinanceira, TContaReceber, TOrcamento } from "../../types/index";
 import { Button, Card, DataTable, IconButton, TextInput, Snackbar, ActivityIndicator, Switch   } from 'react-native-paper';
 import { styles } from "../styles";
 import { SafeAreaView } from "react-native";
 import DatePicker from '../../components/datePicker'
-import {Picker} from '@react-native-picker/picker';
 import React from "react";
 import {
     TProduto,
@@ -33,6 +32,9 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
     const [totalProdutos, setTotalProdutos] = useState('')
     const [dataProdutos, setDataProdutos] = useState<TProduto[]>([]);
     const [isSwitchOn, setIsSwitchOn] = useState(false);
+    const [searchText, setSearchText] = useState('');
+    const [filteredData, setFilteredData] = useState<TProduto[]>([]);
+    const [isDropdownVisible, setDropdownVisible] = useState(false);
 
     const onToggleSwitch = () => setIsSwitchOn(!isSwitchOn);
 
@@ -42,16 +44,13 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
 
     //pagamento
     const [formaPagamento, setFormaPagamento] = useState('');
-    // const [parcelas, setParcelas] = useState('');
     const [pagamentoParcelado, setPagamentoParcelado] = useState<TParcelas[]>([]);
-    // const [valorParcela, setValorParcela] = useState<string>('');
-    // const [prazoParcela, setPrazoParcela] = useState(new Date());
-    // const [numeroParcela, setNumeroParcela] = useState(new Date());
 
     //obs
     const [observacao, onChangeobservacao] = useState<string>('');
     //prazo
     const [prazo, setPrazo] = useState(new Date());
+    const [dataPedido, setdDataPedido] = useState(new Date());
     const [isLoading, setLoading] = useState(false);
     const [isLoadingPedido, setLoadingPedido] = useState(false);
     const [visible, setVisible] = useState(false);
@@ -63,7 +62,6 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
     const [type, setType] = useState<string>('');
 
     useEffect(() => {
-        getProdutos();
         getContaBancaria();
         getCategoFinanceiras();
     }, []);
@@ -76,6 +74,7 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
             if (pedidosContext) {
               pedidosContext.atualizarPedidos(cliente.id_cliente, vendedor.id_vendedor);
               pedidosContext.atualizarOrcamentos(cliente.id_cliente, vendedor.id_vendedor);
+              pedidosContext.getProdutos(setDataProdutos, 'pedido');
             }
         }, []);
 
@@ -131,23 +130,23 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
     };
 
 //GET--------------
-const getProdutos = async () => {
-    setLoading(true);
-    try {
-        const response = await fetch('/api/produtos', {
-            method: 'GET',
-            headers,
-        });
+    // const getProdutos = async () => {
+    // setLoading(true);
+    // try {
+    //     const response = await fetch('/api/produtos', {
+    //         method: 'GET',
+    //         headers,
+    //     });
 
-        const json = await response.json();
-        const produtosFiltrados = json.data.filter((produto: { tipo_produto: string, id_categoria: number }) => produto.tipo_produto === "Produto" && produto.id_categoria === 339468);
-        setDataProdutos(produtosFiltrados);
-    } catch (error) {
-        console.error('Erro:', error);
-    } finally {
-        setLoading(false);
-    }
-};
+    //     const json = await response.json();
+    //     const produtosFiltrados = json.data.filter((produto: { tipo_produto: string, id_categoria: number }) => produto.tipo_produto === "Produto" && (produto.id_categoria === 334412 || produto.id_categoria === 339468));
+    //     setDataProdutos(produtosFiltrados);
+    // } catch (error) {
+    //     console.error('Erro:', error);
+    // } finally {
+    //     setLoading(false);
+    // }
+    // };
 
     // Monta pedido
     const novoPedido = () => {
@@ -159,15 +158,15 @@ const getProdutos = async () => {
               desconto_pedido: String(totalDescontoProdutos), // Valor total do desconto
               peso_total_nota: '0', // Peso total do pedido
               peso_total_nota_liq: '0', // Peso líquido do pedido
-              data_pedido: new Date().toISOString().split('T')[0], // Data do pedido
+              data_pedido: new Date(dataPedido).toISOString().split('T')[0], // Data do pedido
               prazo_entrega: new Date(prazo).toISOString().split('T')[0], // Prazo de entrega (Dias)
               referencia_pedido: null, // Referência do pedido
               obs_pedido: observacao, // Observações do pedido
-              obs_interno_pedido: type === 'troca' ? 'Pedido de troca':'', // Observação interna do pedido
+              obs_interno_pedido: type === 'troca' ? 'Pedido de TROCA':'', // Observação interna do pedido
               status_pedido: (type === 'troca' || (type === 'pedido' && isSwitchOn)) ? Status_pedido["Atendido"] : Status_pedido["Em Aberto"],
               estoque_pedido: Estoque_pedido.Não, // Estoque lançado (Sim/Não)
               contas_pedido: Conta_lancada.Sim, // Contas lançadas (Sim/Não)
-              valor_total_produtos: totalProdutos
+              valor_total_produtos: type === 'troca' ? '00.00' : totalProdutos
             };
     };
     
@@ -180,7 +179,7 @@ const getProdutos = async () => {
           desconto_pedido: String(totalDescontoProdutos), // Valor total do desconto
           peso_total_nota: '0', // Peso total do pedido
           peso_total_nota_liq: '0', // Peso líquido do pedido
-          data_pedido: new Date().toISOString().split('T')[0], // Data do pedido
+          data_pedido: new Date(dataPedido).toISOString().split('T')[0], // Data do pedido
           prazo_orcamento: new Date(prazo).toISOString().split('T')[0], // Prazo de entrega (Dias)
           referencia_pedido: null, // Referência do pedido
           obs_pedido: observacao, // Observações do pedido
@@ -307,11 +306,11 @@ const getProdutos = async () => {
             id_cliente : cliente.id_cliente,
             nome_cliente : cliente.razao_cliente,
             vencimento_rec : new Date(prazo).toISOString().split('T')[0],
-            valor_rec : (parseFloat(totalProdutos)-totalDescontoProdutos).toFixed(2),
+            valor_rec : type === 'troca' ? '00.00' : (parseFloat(totalProdutos)-totalDescontoProdutos).toFixed(2),
             valor_pago : "00.00",
             data_emissao : new Date().toISOString().split('T')[0],
             n_documento_rec : idPedido,
-            observacoes_rec : "",
+            observacoes_rec : type === 'troca' ? 'Conta a receber de TROCA' : "",
             id_centro_custos : 0,
             centro_custos_rec : "",
             liquidado_rec : Liquidado.Não,
@@ -353,10 +352,10 @@ const getProdutos = async () => {
             id_produto: produto.id_produto,
             desc_produto: produto.desc_produto,
             qtde_produto: parseFloat(produto.qtde_produto).toFixed(4),
-            valor_unit_produto: parseFloat(produto.valor_unit_produto).toFixed(4),
+            valor_unit_produto: type === 'troca' ? '00.00' : parseFloat(produto.valor_unit_produto).toFixed(4),
             ipi_produto: produto.ipi_produto ? parseFloat(produto.ipi_produto).toFixed(2) : undefined,
             icms_produto: produto.icms_produto ? parseFloat(produto.icms_produto).toFixed(2) : undefined,
-            valor_custo_produto: produto.valor_custo_produto ? parseFloat(produto.valor_custo_produto).toFixed(4) : undefined,
+            valor_custo_produto: type === 'troca' ? '00.00' : produto.valor_custo_produto ? parseFloat(produto.valor_custo_produto).toFixed(4) : undefined,
             peso_produto: produto.peso_produto ? parseFloat(produto.peso_produto).toFixed(2) : undefined,
             peso_liq_produto: produto.peso_liq_produto ? parseFloat(produto.peso_liq_produto).toFixed(2) : undefined,
         }));
@@ -424,21 +423,21 @@ const getProdutos = async () => {
     };
 
     const removerProduto = (index: number) => {
-    setArrayProdutos((prevArray) => {
-        // Obter o produto que será removido
-        const produtoRemovido = prevArray[index];
-        
-        // Atualizar o total de produtos removendo o valor do produto removido
-        const valorRemovido = parseFloat(produtoRemovido.valor_unit_produto) * parseInt(produtoRemovido.qtde_produto);
-        setTotalProdutos((parseFloat(totalProdutos) - valorRemovido).toFixed(2));
-        
-        // Atualizar o total de desconto removendo o desconto do produto removido
-        const descontoRemovido = produtoRemovido.desconto_produto ? parseFloat(produtoRemovido.desconto_produto) : 0;
-        setTotalDescontoProdutos(totalDescontoProdutos - descontoRemovido);
+        setArrayProdutos((prevArray) => {
+            // Obter o produto que será removido
+            const produtoRemovido = prevArray[index];
+            
+            // Atualizar o total de produtos removendo o valor do produto removido
+            const valorRemovido = parseFloat(produtoRemovido.valor_unit_produto) * parseInt(produtoRemovido.qtde_produto);
+            setTotalProdutos((parseFloat(totalProdutos) - valorRemovido).toFixed(2));
+            
+            // Atualizar o total de desconto removendo o desconto do produto removido
+            const descontoRemovido = produtoRemovido.desconto_produto ? parseFloat(produtoRemovido.desconto_produto) : 0;
+            setTotalDescontoProdutos(totalDescontoProdutos - descontoRemovido);
 
-        // Retornar o novo array de produtos sem o produto removido
-        return prevArray.filter((_, i) => i !== index);
-    });
+            // Retornar o novo array de produtos sem o produto removido
+            return prevArray.filter((_, i) => i !== index);
+        });
     };
 
     const handleChangeDesconto = (texto: any) => {
@@ -458,6 +457,27 @@ const getProdutos = async () => {
             criaNovoOrcamento();
         };
     };
+
+    const handleSearch = (text: string) => {
+        setSearchText(text);
+        // Filtra os dados conforme o texto digitado
+        if (text === '') {
+          setFilteredData([]); // Se o campo de busca estiver vazio, não exibe resultados
+        } else {
+          setDropdownVisible(true);
+        const filtered = dataProdutos.filter(item =>
+          item.desc_produto.toLowerCase().includes(text.toLowerCase())
+        );
+        setFilteredData(filtered);
+      }
+    };
+
+    const handleSelectClient = (produto: TProduto) => {
+            setProduto(produto); // Seleciona o cliente
+            setSearchText(produto.desc_produto); // Atualiza o campo de pesquisa com o nome do cliente
+            setFilteredData([]); // Restaura os dados filtrados para mostrar todos novamente
+            setDropdownVisible(false);
+        };
       
     return (
         <SafeAreaView style={styles.container}>
@@ -481,7 +501,7 @@ const getProdutos = async () => {
             }
             </View>
             ) : (
-                <ScrollView style={[styles.scrollView]}>
+                <ScrollView style={styles.scrollView}>
                     {/* Tipo pedido */}
                     <Card mode="elevated" style={styles.cardPanel}>
                         <View style={[styles.cardPanelContent, { justifyContent: 'space-between' }]}>
@@ -528,61 +548,56 @@ const getProdutos = async () => {
                         </View>
                     </Card>
                     {/* Produtos */}
-                    <Card mode="elevated" style={styles.cardPanel}>
-                            <View style={[styles.cardPanelContent, { justifyContent: 'space-between' }]}>
-                                <Text style={styles.h3}>Produtos  </Text>
-                                <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: arrayProdutos.length ? 'green' : 'red' }}>obrigatório</Text>
+                    <Card mode="elevated" style={[styles.cardPanel, {overflow: 'visible'}]}>
+                        <View style={[styles.cardPanelContent, { justifyContent: 'space-between' }]}>
+                            <Text style={styles.h3}>Produtos  </Text>
+                            <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: arrayProdutos.length ? 'green' : 'red' }}>obrigatório</Text>
+                        </View>
+                        <View style={[styles.cardPanelContent, {overflow: 'visible'}]}>
+                            <View style={{width:100, flexGrow: 1, zIndex: 10000, borderWidth: 0, flex: 1, overflow: 'visible'}}>
+                                {/* <View style={{zIndex: 10000, borderWidth: 0, flex: 1}}> */}
+                                    {/* Barra de Pesquisa */}
+                                    <TextInput
+                                        outlineColor='#145B91'
+                                        activeOutlineColor='#145B91'
+                                        mode="outlined"
+                                        style={styles.input}
+                                        label="Pesquisar produtos"
+                                        value={searchText}
+                                        onChangeText={handleSearch}
+                                        onFocus={() => setDropdownVisible(true)}
+                                    />
                             </View>
-                            <View style={styles.cardPanelContent}>
-                                <View style={{width:100, flexGrow: 1}}>
-                                <Picker
-                                    dropdownIconColor="#9E9E9E"
-                                    style={styles.selectPicker}
-                                    selectedValue={produto?.desc_produto}
-                                    onValueChange={(itemValue, itemIndex) => {
-                                        const selectedItem = dataProdutos[itemIndex - 1];
-                                        setProduto(selectedItem || null);
-                                    } }
-                                    enabled={type !== ''}
-                                    >
-                                    <Picker.Item style={{fontSize:14}} label='Selecione um produto' value='Selecione um produto' />
-                                    {dataProdutos.map((item) => {
-                                        return <Picker.Item style={{fontSize:14}} label={item.desc_produto} value={item.desc_produto} key={item.id_produto}/>;
-                                    })}
-                                </Picker>
-                                </View>
-                                <TextInput
-                                    outlineColor='#145B91'
-                                    activeOutlineColor='#145B91'
-                                    style={{ marginHorizontal: 2, width: 70, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
-                                    value={descontoProdutos}
-                                    onChangeText={handleChangeDesconto}
-                                    mode="outlined"
-                                    label="Desconto"
-                                    keyboardType="numeric"
-                                    disabled={type === ''}/>
-                                <TextInput
-                                    outlineColor='#145B91'
-                                    activeOutlineColor='#145B91'
-                                    mode="outlined"
-                                    label="Qtde"
-                                    style={{ marginHorizontal: 5, width: 60, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
-                                    value={quantidadeProdutos}
-                                    keyboardType="numeric"
-                                    onChangeText={handleChangeQuantidade}
-                                    disabled={type === ''}/>
-                                <IconButton
-                                    style={{ width: 25 }}
-                                    icon="plus-circle"
-                                    iconColor='green'
-                                    size={25}
-                                    onPress={() => adicionarProduto()}
-                                    disabled={(produto && quantidadeProdutos) ? false : true} />
-                            </View>
-                            <View style={styles.cardPanelContent}>
-                            </View>
-                            {arrayProdutos.length ?
-                                <View style={styles.viewCardPedido}>
+                            <TextInput
+                                outlineColor='#145B91'
+                                activeOutlineColor='#145B91'
+                                style={{ marginHorizontal: 2, width: 70, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
+                                value={descontoProdutos}
+                                onChangeText={handleChangeDesconto}
+                                mode="outlined"
+                                label="Desconto"
+                                keyboardType="numeric"
+                                disabled={type === ''}/>
+                            <TextInput
+                                outlineColor='#145B91'
+                                activeOutlineColor='#145B91'
+                                mode="outlined"
+                                label="Qtde"
+                                style={{ marginHorizontal: 5, width: 60, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
+                                value={quantidadeProdutos}
+                                keyboardType="numeric"
+                                onChangeText={handleChangeQuantidade}
+                                disabled={type === ''}/>
+                            <IconButton
+                                style={{ width: 25 }}
+                                icon="plus-circle"
+                                iconColor='green'
+                                size={25}
+                                onPress={() => adicionarProduto()}
+                                disabled={(produto && quantidadeProdutos) ? false : true} />
+                        </View>
+                        {arrayProdutos.length ?
+                        <View style={styles.viewCardPedido}>
                                     <DataTable>
                                         <DataTable.Header>
                                             <DataTable.Title style={{ paddingBottom: 0, maxWidth:130 }}>Produtos</DataTable.Title>
@@ -610,21 +625,30 @@ const getProdutos = async () => {
                                             </View>
                                         ))}
                                     </DataTable>
-                                </View> : null}
+                        </View> : null}
                     </Card>
+                    {isDropdownVisible && (
+                        <View style={styles.dropdownContainer}>
+                        <FlatList
+                            data={filteredData}
+                            keyExtractor={(item) => item.id_produto.toString()}
+                            renderItem={({ item }) => (
+                            <TouchableOpacity onPress={() => handleSelectClient(item)}>
+                                <Text style={styles.dropdownItem}>
+                                {item.desc_produto}
+                                </Text>
+                            </TouchableOpacity>
+                            )}
+                        />
+                        </View>
+                    )}
                     {/* Prazo */}
                     <Card mode="elevated" style={styles.cardPanel}>
                         <Text style={styles.h3}>Prazos</Text>
                         <View style={styles.cardPanelContent}>
                             <View style={styles.cardInputs}>
                                 <Text>Data do pedido</Text>
-                                <TextInput
-                                    outlineColor='#145B91'
-                                    activeOutlineColor='#145B91'
-                                    mode="outlined"
-                                    label="Hoje"
-                                    style={{ backgroundColor: '#F7F8FA', fontSize: 14, fontFamily: 'Roboto' }}
-                                    disabled />
+                                {<DatePicker date={dataPedido} setDate={setdDataPedido} />}
                             </View>
                             <View style={styles.cardInputs}>
                                 <Text>Prazo de entrega</Text>

@@ -128,6 +128,27 @@ export const styles = StyleSheet.create({
 
   tableTitlePagamento: {
     justifyContent: 'center',
-  }
+  },
+  dropdownContainer: {
+    position: "absolute",
+    top: 122, // Ajuste conforme necessário para alinhar com o input
+    left: 0,
+    right: 0,
+    maxHeight: 200,
+    backgroundColor: '#f0f8ff',
+    borderWidth: 0,
+    zIndex: 1000,
+    elevation: 10
+  },
+  dropdownItem: {
+    padding: 10,
+    fontSize: 14,
+  },
+  input: {
+    marginHorizontal: 5,
+    backgroundColor: 'white',
+    fontSize: 14,
+    fontFamily: 'Roboto'
+  },
 
   })

@@ -549,6 +549,15 @@ export type TBancoCadastro = {
     multa_atraso: string; // Formato "0.00"
 };
 
+export type TEstoque = {
+    id_produto: number,
+    tipo_estoque: string,
+    qtde_estoque?: string,
+    valor_estoque?: string,
+    obs_estoque?: string,
+    identificacao?: string
+};
+
 export type TCentrosCusto = {
     id_centro_custos?: number,
     desc_centro_custos?: string,

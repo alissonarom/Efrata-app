@@ -56,12 +56,14 @@ export const styles = StyleSheet.create({
   cardPanel:{
     backgroundColor: "white",
     marginBottom: 10,
-    padding: 10
+    padding: 10,
+    zIndex: 1
   },
   cardPanelContent: {
     display: "flex",
     flexDirection: "row",
     flexWrap: "nowrap",
+    zIndex: 1
   },
   title: {
     color: "#145B91"
@@ -137,6 +139,27 @@ export const styles = StyleSheet.create({
 
   tableTitlePagamento: {
     justifyContent: 'center',
-  }
+  },
+  dropdownContainer: {
+    position: "absolute",
+    top: 290, // Ajuste conforme necessário para alinhar com o input
+    left: 0,
+    right: 0,
+    maxHeight: 200,
+    backgroundColor: '#f0f8ff',
+    borderWidth: 0,
+    zIndex: 1000,
+    elevation: 10
+  },
+  dropdownItem: {
+    padding: 10,
+    fontSize: 14,
+  },
+  input: {
+    marginHorizontal: 5,
+    backgroundColor: 'white',
+    fontSize: 14,
+    fontFamily: 'Roboto'
+  },
 
   })

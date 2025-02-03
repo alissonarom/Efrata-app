@@ -1,6 +1,6 @@
 // PedidosContext.tsx
 import React, { createContext, useState, ReactNode } from 'react';
-import { TPedido, TParcelas, TProdutoPedido, TOrcamentoResponse, TCentrosCusto, TContaReceber } from "../types";
+import { TPedido, TParcelas, TProdutoPedido, TOrcamentoResponse, TCentrosCusto, TContaReceber, TProduto } from "../types";
 import { headers } from "../utils"
 
 interface PedidosContextProps {
@@ -13,6 +13,7 @@ interface PedidosContextProps {
   contas: TContaReceber[];
   atualizarCentroCusto: ()=>void;
   centroCusto: TCentrosCusto[];
+  getProdutos: (setFunction: (arg0: TProduto[]) => void, type: any) => Promise<void>;
 }
 
 export const PedidosContext = createContext<PedidosContextProps | undefined>(undefined);
@@ -210,8 +211,68 @@ export const PedidosProvider = ({ children }: { children: ReactNode }) => {
   }
   };
 
+  const getProdutos = async (setFunction: (arg0: TProduto[]) => void, type: string) => {
+    setLoading(true); // Ativa o indicador de carregamento
+    let produtosFiltrados: TProduto[] = []; // Inicializa como lista vazia
+    let allPedidos: TProduto[] = [];
+    let offset = 0;
+    const limit = 250;
+  
+    try {
+      let hasMore = true;
+  
+      // Loop para buscar os produtos em paginação
+      while (hasMore) {
+        const response = await fetch(`/api/produtos?offset=${offset}&limit=${limit}`, {
+          method: 'GET',
+          headers,
+        });
+  
+        const json = await response.json();
+  
+        // Adicionar produtos da página atual ao array total
+        allPedidos = [...allPedidos, ...json.data];
+  
+        // Atualiza o `offset` e verifica se há mais produtos
+        const { total, offset: currentOffset, total_count } = json.paging;
+        offset = currentOffset + total_count;
+        hasMore = allPedidos.length < total;
+      }
+  
+      // Filtro de produtos com base no tipo
+      const categorias = type === 'despesa'
+        ? [334411, 339468, 334412]
+        : [334412, 339468];
+  
+      produtosFiltrados = allPedidos.filter(
+        (produto: { tipo_produto: string; id_categoria: number }) =>
+          produto.tipo_produto === "Produto" && categorias.includes(produto.id_categoria)
+      );
+  
+      // Define os produtos filtrados no estado
+      setFunction(produtosFiltrados);
+    } catch (error) {
+      console.error('Erro ao buscar produtos:', error);
+    } finally {
+      setLoading(false); // Desativa o indicador de carregamento
+    }
+  };
+  
+
   return (
-    <PedidosContext.Provider value={{ pedidos, atualizarPedidos, orcamentos, atualizarOrcamentos, isLoading, atualizarContasReceber, contas, atualizarCentroCusto, centroCusto  }}>
+    <PedidosContext.Provider value={{
+      pedidos,
+      atualizarPedidos,
+      orcamentos,
+      atualizarOrcamentos,
+      isLoading,
+      atualizarContasReceber,
+      contas,
+      atualizarCentroCusto,
+      centroCusto,
+      getProdutos,
+
+    }}>
       {children}
     </PedidosContext.Provider>
   );

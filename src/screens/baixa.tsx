@@ -224,6 +224,4 @@ export default function Baixa({navigation}:BaixaScreenPorps) {
             </Snackbar>
         </SafeAreaView>
     );
-  };
-
-  
+};

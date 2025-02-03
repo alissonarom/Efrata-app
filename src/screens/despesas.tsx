@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
-import { View, Text, ScrollView } from "react-native";
-import { TDespesas, DespesasScreenPorps, TBancoCadastro, RootStackParamList, TCentrosCusto } from "../../src/types/index";
-import { Button, Card, TextInput, Snackbar, ActivityIndicator, Checkbox  } from 'react-native-paper';
+import { View, Text, ScrollView, TouchableOpacity, FlatList } from "react-native";
+import { TDespesas, DespesasScreenPorps, TBancoCadastro, RootStackParamList, TCentrosCusto, TProduto, TProdutoPedido, TEstoque } from "../../src/types/index";
+import { Button, Card, TextInput, Snackbar, ActivityIndicator, Checkbox, DataTable, IconButton  } from 'react-native-paper';
 import { styles } from "./styles"
 import { SafeAreaView } from "react-native";
 import DatePicker from '../components/datePicker'
@@ -14,11 +14,22 @@ import { PedidosContext } from "../utils/PedidoContext";
 export default function Despesas({navigation}:DespesasScreenPorps) {
     const pedidosContext = useContext(PedidosContext);
     const [checked, setChecked] = useState(false);
+    const [checkedProduto, setCheckedProduto] = useState(false);
     const [visible, setVisible] = useState(false);
     
+    // Produtos
+    const [produto, setProduto] = useState<TProduto | null>(null);
+    const [arrayProdutos, setArrayProdutos] = useState<TProdutoPedido[]>([]);
+    const [quantidadeProdutos, setQuantidadeProdutos] = useState<string>();
+    const [descontoProdutos, setDescontoProdutos] = useState<string>('');
+    const [totalProdutos, setTotalProdutos] = useState('');
+    const [totalDescontoProdutos, setTotalDescontoProdutos] = useState(0);
+    const [dataProdutos, setDataProdutos] = useState<TProduto[]>([]);
+    const [searchText, setSearchText] = useState('');
+    const [filteredData, setFilteredData] = useState<TProduto[]>([]);
+    const [isDropdownVisible, setDropdownVisible] = useState(false);
     // centros de custo
     const [centroCusto, setCentroCusto] = useState<TCentrosCusto>();
-    const [dataCentroCusto, setDataCentroCusto] = useState<TCentrosCusto[]>([]);
     //Dados pagamento
     const [nomeDespesa, setNomeDespesa] = useState('');
     //conta bancaria
@@ -54,9 +65,9 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
     useEffect(() => {
         getContaBancaria();
         pedidosContext?.atualizarCentroCusto();
+        pedidosContext?.getProdutos(setDataProdutos, 'despesa');
     }, []);
 
-    //GET conta bancaria
     const getContaBancaria = async () => {
         setLoading(true);
         try {
@@ -72,9 +83,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
         } finally {
           setLoading(false);
         }
-        // setDataProdutos(dataProdutoMock);
     };
-    
     const handleChangeTextJurosMulta = (texto: any) => {
         const valorFormatado = formatarValor(texto);
         setJurosMulta(valorFormatado)
@@ -82,6 +91,9 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
     const handleChangeTextDesconto = (texto: any) => {
         const valorFormatado = formatarValor(texto);
         setDesconto(valorFormatado)
+    };
+    const handleChangeQuantidade = (texto: any) => {
+        setQuantidadeProdutos(texto)
     };
     const handleChangeTextTaxa = (texto: any) => {
         const valorFormatado = formatarValor(texto);
@@ -91,7 +103,6 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
         const valorFormatado = formatarValor(texto);
         setValorBaixa(valorFormatado)
     };
-    // Função principal para criar o despesa.
     const criaNovaDespesa = async () => {
     setLoading(true);
     const despesa: TDespesas = {
@@ -107,7 +118,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
         nome_fornecedor: fornecedor,
         data_emissao: formatDate(dataEmissao), // Corrigido para evitar caracteres especiais
         observacoes_pag: observacao,
-        liquidado_pag: checked ? 'Sim' : 'Nao', // Corrigido "Não" para "Nao" sem acento
+        liquidado_pag: (checked || checkedProduto) ? 'Sim' : 'Nao', // Corrigido "Não" para "Nao" sem acento
         data_pagamento: formatDate(dataPagamento), // Formato "YYYY-MM-DD"
         forma_pagamento: formaPagamento, // Ex: "Cartão"
         valor_juros: parseFloat(jurosMulta), // Formato "00.00"
@@ -129,17 +140,109 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
             throw new Error('Erro ao cadastrar despesas');
         }
         const data = await despesaResponse.json();
-        
-        // Supondo que a data esteja em um campo chamado "data" no response
+        console.log('conta pagar', data.data.id_conta_pag)
+
         setVisible(true);
+        lancarEstoque(data.data.id_conta_pag)
 
     } catch (error) {
         console.error('Erro ao criar contas a pagar:', error);
     } finally {
         setTimeout(() => {
             navigation.navigate('Home', { vendedor: vendedor });
-        }, 1000);
+        }, 2000);
     }
+    };
+    const lancarEstoque = async (id_conta_rec:number) => {
+    
+        try {
+            for (const item of arrayProdutos) {
+                const estoque: TEstoque = {
+                    id_produto: item.id_produto,
+                    tipo_estoque: "Entrada",
+                    qtde_estoque: item.qtde_produto, // Certifique-se de converter para número, se necessário
+                    obs_estoque: observacao+` Estoque lançado com a despesa ${id_conta_rec}`,
+                    identificacao: `Ped_${id_conta_rec}`,
+                };
+    
+                const estoqueResponse = await fetch(`/api/produtos/${item.id_produto}/estoque`, {
+                    method: 'POST',
+                    body: JSON.stringify(estoque),
+                    headers,
+                });
+    
+                if (!estoqueResponse.ok) {
+                    throw new Error(`Erro ao cadastrar o estoque do produto ${item.desc_produto}`);
+                }
+                const data = await estoqueResponse.json();
+                console.log('Estoque lançado', data.data)
+            }
+    
+        } catch (error) {
+            console.error('Erro ao lançar estoque:', error);
+    
+        };
+    };
+    const adicionarProduto = () => {
+            if (produto && quantidadeProdutos) {
+              const novoProduto: TProdutoPedido = {
+                  id_produto: produto.id_produto,
+                  desc_produto: produto.desc_produto,
+                  qtde_produto: quantidadeProdutos,
+                  valor_unit_produto: produto.valor_produto,
+                  valor_custo_produto: produto.valor_custo_produto,
+                  valor_total_produto: (parseInt(produto.valor_produto) * parseInt(quantidadeProdutos)).toFixed(2),
+                  desconto_produto: descontoProdutos,
+                  valor_desconto: ""
+              };
+              setTotalProdutos(String(parseFloat(totalProdutos || "0") + (parseFloat(quantidadeProdutos || "0") * parseFloat(produto.valor_produto || "0"))));
+                setTotalDescontoProdutos(totalDescontoProdutos + (descontoProdutos ? parseFloat(descontoProdutos): 0));
+                setArrayProdutos((prevArray) => [...prevArray, novoProduto]);
+            }
+            setProduto(null); // Reset Picker
+            setQuantidadeProdutos('');
+            setDescontoProdutos('');
+    };
+    const removerProduto = (index: number) => {
+        setArrayProdutos((prevArray) => {
+            // Obter o produto que será removido
+            const produtoRemovido = prevArray[index];
+            
+            // Atualizar o total de produtos removendo o valor do produto removido
+            const valorRemovido = parseFloat(produtoRemovido.valor_unit_produto) * parseInt(produtoRemovido.qtde_produto);
+            setTotalProdutos((parseFloat(totalProdutos) - valorRemovido).toFixed(2));
+            
+            // Atualizar o total de desconto removendo o desconto do produto removido
+            const descontoRemovido = produtoRemovido.desconto_produto ? parseFloat(produtoRemovido.desconto_produto) : 0;
+            setTotalDescontoProdutos(totalDescontoProdutos - descontoRemovido);
+
+            // Retornar o novo array de produtos sem o produto removido
+            return prevArray.filter((_, i) => i !== index);
+        });
+    };
+    function ckedProduto() {
+        checkedProduto ?
+        [setCheckedProduto(!checkedProduto), setArrayProdutos([])] :
+        setCheckedProduto(!checkedProduto)
+    };
+    const handleSearch = (text: string) => {
+        setSearchText(text);
+        // Filtra os dados conforme o texto digitado
+        if (text === '') {
+          setFilteredData([]); // Se o campo de busca estiver vazio, não exibe resultados
+        } else {
+          setDropdownVisible(true);
+        const filtered = dataProdutos.filter(item =>
+          item.desc_produto.toLowerCase().includes(text.toLowerCase())
+        );
+        setFilteredData(filtered);
+      }
+    };
+    const handleSelectClient = (produto: TProduto) => {
+        setProduto(produto); // Seleciona o cliente
+        setSearchText(produto.desc_produto); // Atualiza o campo de pesquisa com o nome do cliente
+        setFilteredData([]); // Restaura os dados filtrados para mostrar todos novamente
+        setDropdownVisible(false);
     };
 
     return (
@@ -150,11 +253,105 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
             </View>
             ) : (
                 <ScrollView style={styles.scrollView}>
-                    {/* Dados do pagamento */}
+                        {/* Dados do pagamento */}
                     <Card mode="elevated" style={styles.cardPanel}>
+                        <View style={[styles.cardPanelContent, {marginBottom: 10, alignItems: 'center'}]}>
+                        <Checkbox
+                            color='#145B91'
+                            status={checkedProduto ? 'checked' : 'unchecked'}
+                            onPress={() => {
+                              ckedProduto();
+                            }}
+                        />
+                        <Text>Adicionar produtos</Text>
+                        </View>
+                        { checkedProduto ?
+                        <View style={[styles.cardPanel, {padding:0, overflow: 'visible'}]}>
+                            <View style={[styles.cardPanelContent, { justifyContent: 'space-between', marginLeft: 5 }]}>
+                                <Text>Produtos</Text>
+                                <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: arrayProdutos.length ? 'green' : 'red' }}>obrigatório</Text>
+                            </View>
+                            <View style={[styles.cardPanelContent,{maxHeight: 56}]}>
+                                <View style={{zIndex: 10000, borderWidth: 0, flex: 1}}>
+                                    {/* Barra de Pesquisa */}
+                                    <TextInput
+                                      outlineColor='#145B91'
+                                      activeOutlineColor='#145B91'
+                                      mode="outlined"
+                                      style={styles.input}
+                                      label="Pesquisar produtos"
+                                      value={searchText}
+                                      onChangeText={handleSearch}
+                                      onFocus={() => setDropdownVisible(true)}
+                                    />
+                                </View>
+                                <TextInput
+                                    outlineColor='#145B91'
+                                    activeOutlineColor='#145B91'
+                                    mode="outlined"
+                                    label="Qtde"
+                                    style={{ marginHorizontal: 5, width: 60, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
+                                    value={quantidadeProdutos}
+                                    keyboardType="numeric"
+                                    onChangeText={handleChangeQuantidade}/>
+                                <IconButton
+                                    style={{ width: 40, alignSelf: 'center' }}
+                                    icon="plus-circle"
+                                    iconColor='green'
+                                    size={40}
+                                    onPress={() => adicionarProduto()}
+                                    disabled={(produto && quantidadeProdutos) ? false : true} />
+                            </View>
+                            {arrayProdutos.length ?
+                                <View style={[styles.viewCardPedido, {paddingVertical:0, paddingLeft:10, paddingRight:0}]}>
+                                <DataTable>
+                                    <DataTable.Header>
+                                        <DataTable.Title style={{ paddingBottom: 0, paddingTop: 10, flexGrow:1, paddingRight: 45 }}>Produtos</DataTable.Title>
+                                        <DataTable.Title numeric style={{ paddingBottom: 0, paddingTop: 10, flexGrow:2, paddingRight: 45 }}>Qtd</DataTable.Title>
+                                        {/* <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 40 }}>V. unit.</DataTable.Title>
+                                        <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 35 }}>Desc.</DataTable.Title>
+                                        <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 50 }}>Total</DataTable.Title> */}
+                                    </DataTable.Header>
+                                    {arrayProdutos.map((item, index) => (
+                                        <View style={{ display: "flex", justifyContent: "space-between", flexDirection: "row", alignItems:'center', borderBottomColor:'rgba(20, 91, 145, 0.5)', borderBottomWidth: 1}}>
+                                            <DataTable.Row key={index} style={{paddingHorizontal: 0, flexGrow: 1}}>
+                                                <DataTable.Cell style={{ width: 90 }} textStyle={{ fontSize: 11 }}>{item.desc_produto}</DataTable.Cell>
+                                                <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 30 }} textStyle={{ fontSize: 11 }}>{Number(item.qtde_produto)}</DataTable.Cell>
+                                                {/* <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 40 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.valor_unit_produto)}`}</DataTable.Cell>
+                                                <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 35 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.desconto_produto)}`}</DataTable.Cell>
+                                                <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 50 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.valor_total_produto) - Number(item.desconto_produto)}`}</DataTable.Cell> */}
+                                            </DataTable.Row>
+                                            <IconButton
+                                                icon="delete"
+                                                iconColor="red"
+                                                size={25}
+                                                onPress={() => removerProduto(index)}
+                                                style={{margin: 0}}
+                                            />
+                                        </View>
+                                    ))}
+                                </DataTable>
+                                </View> : null}
+                        </View> : null}
+                        {/* Dropdown Contêiner */}
+                        {isDropdownVisible && (
+                            <View style={styles.dropdownContainer}>
+                              <FlatList
+                                data={filteredData}
+                                keyExtractor={(item) => item.id_produto.toString()}
+                                renderItem={({ item }) => (
+                                  <TouchableOpacity onPress={() => handleSelectClient(item)}>
+                                    <Text style={styles.dropdownItem}>
+                                      {item.desc_produto}
+                                    </Text>
+                                  </TouchableOpacity>
+                                )}
+                              />
+                            </View>
+                        )}
                         {/*Nome da despesa, conta bancaria*/}
-                        <View style={[styles.cardPanelContent,{marginVertical: 10, justifyContent: 'space-between'}]}>
-                            <View style={{marginVertical: 10, display: "flex", flexDirection: 'column', flexWrap: "nowrap"}}>
+                        <View style={[styles.cardPanelContent,{justifyContent: 'space-between', zIndex: 1}]}>
+                            <View style={{marginBottom: 10, display: "flex", flexDirection: 'column', flexWrap: "nowrap"}}>
                                 <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: nomeDespesa ? 'green' : 'red', marginLeft: 5 }}>obrigatório</Text>
                                 <TextInput
                                     outlineColor='#145B91'
@@ -166,7 +363,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                                     label="Nome da despesa"
                                 />
                             </View>
-                            <View style={{marginVertical: 10, display: "flex", flexDirection: 'column', flexWrap: "nowrap", flexGrow:1}}>
+                            <View style={{marginBottom: 10, display: "flex", flexDirection: 'column', flexWrap: "nowrap", flexShrink:1}}>
                                 <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: contaBancaria ? 'green' : 'red', marginLeft: 5 }}>obrigatório</Text>
                                 <Picker
                                     dropdownIconColor="#9E9E9E"
@@ -184,7 +381,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                             </View>
                         </View>
                         {/*Centro custo, Forma pagamento*/}
-                        <View style={[styles.cardPanelContent, {marginVertical: 10}]}>
+                        <View style={[styles.cardPanelContent, {marginBottom: 10, zIndex: 1}]}>
                             <Picker
                                 dropdownIconColor="#9E9E9E"
                                 placeholder="Centro de custo"
@@ -214,11 +411,11 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                             </Picker>
                         </View>
                         {/*Vencimento, data de emissão*/}
-                        <View style={[styles.cardPanelContent, {marginVertical: 10}]}>
+                        <View style={[styles.cardPanelContent, {marginBottom: 10, zIndex: 1}]}>
                             <View style={[styles.cardInputs, {marginHorizontal: 5}]}>
-                                <View style={{display: 'flex', flexDirection: 'row', justifyContent: 'space-between'}}>
+                                <View style={{display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems:'center'}}>
                                     <Text>Vencimento</Text>
-                                    <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: vencimento ? 'green' : 'red', marginLeft: 5 }}>obrigatório</Text>
+                                    <Text style={{ fontSize: 10, color: vencimento ? 'green' : 'red', marginLeft: 5 }}>obrigatório</Text>
                                 </View>
                                 <DatePicker date={vencimento} setDate={setVencimento} />
                             </View>
@@ -228,9 +425,9 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                             </View>
                         </View>
                         {/*Fornecedor, valor*/}
-                        <View style={[styles.cardPanelContent, {marginVertical: 10}]}>
-                            <View style={[styles.cardInputs, {marginHorizontal: 5}]}>
-                                <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: fornecedor ? 'green' : 'red', marginLeft: 5 }}>obrigatório</Text>
+                        <View style={[styles.cardPanelContent, {marginBottom: 10, zIndex: 1}]}>
+                            <View style={[styles.cardInputs, {flexShrink: 1, width: '100%', marginHorizontal: 0}]}>
+                                <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: fornecedor ? 'green' : 'red', marginLeft: 5}}>obrigatório</Text>
                                 <TextInput
                                     outlineColor='#145B91'
                                     activeOutlineColor='#145B91'
@@ -241,7 +438,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                                     onChangeText={setFornecedor}
                                 />
                             </View>
-                            <View style={[styles.cardInputs, {marginHorizontal: 5}]}>
+                            <View style={[styles.cardInputs, {flexShrink: 1, width: '100%', marginHorizontal: 0}]}>
                                 <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: valorBaixa ? 'green' : 'red', marginLeft: 5 }}>obrigatório</Text>
                                 <TextInput
                                     outlineColor='#145B91'
@@ -256,7 +453,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                             </View>
                         </View>
                         {/*checkbox pago*/}
-                        <View style={[styles.cardPanelContent, {marginVertical: 10}]}>
+                        <View style={[styles.cardPanelContent, {marginBottom: 10, alignItems: 'center', zIndex: 1}]}>
                             <Checkbox
                                 color='#145B91'
                                 status={checked ? 'checked' : 'unchecked'}
@@ -264,12 +461,12 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                                   setChecked(!checked);
                                 }}
                             />
-                            <Text>Caso essa opção esteja marcada, o lançamento será criado e pago ao mesmo tempo.</Text>
+                            <Text>Lançar despesa como paga</Text>
                         </View>
                         { checked ?
                         //valor, juros/multa, desconto, taxa, valor pago
                         (<>
-                        <View style={[styles.cardPanelContent, {marginVertical: 10}]}>
+                        <View style={[styles.cardPanelContent, {marginBottom: 10}]}>
                             <View style={styles.cardInputs}>
                                 <Text>Data de pagamento</Text>
                                 <DatePicker date={dataPagamento} setDate={setDataPagamento} />
@@ -288,7 +485,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                                 />
                             </View>
                         </View>
-                        <View style={[styles.cardPanelContent, {marginVertical: 10}]}>
+                        <View style={[styles.cardPanelContent, {marginBottom: 10}]}>
                             <TextInput
                                 outlineColor='#145B91'
                                     activeOutlineColor='#145B91'
@@ -310,7 +507,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                                     keyboardType="numeric"
                             />
                         </View>
-                        <View style={[styles.cardPanelContent, {marginVertical: 10}]}>
+                        <View style={[styles.cardPanelContent, {marginBottom: 10}]}>
                             <TextInput
                                 outlineColor='#145B91'
                                 activeOutlineColor='#145B91'
@@ -337,7 +534,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                         </View>
                         </>) : null}   
                         {/* Observação */}
-                        <View style={[styles.cardPanelContent, {marginVertical: 10, flexDirection:'column'}]}>
+                        <View style={[styles.cardPanelContent, {marginBottom: 10, flexDirection:'column'}]}>
                             <Text style={styles.h3}>Observação</Text>
                             <View style={styles.cardPanelContent}>
                                 <TextInput
@@ -352,7 +549,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                                     multiline
                                 />
                             </View>
-                    </View>                         
+                        </View>                         
                     </Card>
                 </ScrollView>
                 )}
