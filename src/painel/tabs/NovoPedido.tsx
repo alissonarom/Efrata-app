@@ -29,6 +29,7 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
     const [quantidadeProdutos, setQuantidadeProdutos] = useState<string>();
     const [descontoProdutos, setDescontoProdutos] = useState<string>('');
     const [totalDescontoProdutos, setTotalDescontoProdutos] = useState(0);
+    const [valorUnitario, setValorUnitario] = useState('');
     const [totalProdutos, setTotalProdutos] = useState('')
     const [dataProdutos, setDataProdutos] = useState<TProduto[]>([]);
     const [isSwitchOn, setIsSwitchOn] = useState(false);
@@ -275,19 +276,21 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
               id_produto: produto.id_produto,
               desc_produto: produto.desc_produto,
               qtde_produto: quantidadeProdutos,
-              valor_unit_produto: produto.valor_produto,
+              valor_unit_produto: valorUnitario,
               valor_custo_produto: produto.valor_custo_produto,
-              valor_total_produto: (parseInt(produto.valor_produto) * parseInt(quantidadeProdutos)).toFixed(2),
+              valor_total_produto: (parseFloat(valorUnitario) * parseFloat(quantidadeProdutos)).toFixed(2),
               desconto_produto: descontoProdutos,
               valor_desconto: ""
           };
-          setTotalProdutos(String(parseFloat(totalProdutos || "0") + (parseFloat(quantidadeProdutos || "0") * parseFloat(produto.valor_produto || "0"))));
-            setTotalDescontoProdutos(totalDescontoProdutos + (descontoProdutos ? parseFloat(descontoProdutos): 0));
-            setArrayProdutos((prevArray) => [...prevArray, novoProduto]);
+          setTotalProdutos(String(parseFloat(totalProdutos || "0") + (parseFloat(quantidadeProdutos || "0") * parseFloat(valorUnitario || "0"))));
+          setTotalDescontoProdutos(totalDescontoProdutos + (descontoProdutos ? parseFloat(descontoProdutos): 0));
+          setArrayProdutos((prevArray) => [...prevArray, novoProduto]);
         }
         setProduto(null); // Reset Picker
         setQuantidadeProdutos('');
         setDescontoProdutos('');
+        setValorUnitario('');
+        setSearchText('');
     };
 
     //formata Nome vendedor
@@ -444,6 +447,11 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
         const valorFormatado = formatarValor(texto);
         setDescontoProdutos(valorFormatado)
     };
+    
+    const handleChangeValorUnitario = (texto: any) => {
+        const valorFormatado = formatarValor(texto);
+        setValorUnitario(valorFormatado)
+    };
 
     const handleChangeQuantidade = (texto: any) => {
         // const valorFormatado = formatarValor(texto);
@@ -472,11 +480,12 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
       }
     };
 
-    const handleSelectClient = (produto: TProduto) => {
+    const handleSelectProduto = (produto: TProduto) => {
             setProduto(produto); // Seleciona o cliente
             setSearchText(produto.desc_produto); // Atualiza o campo de pesquisa com o nome do cliente
             setFilteredData([]); // Restaura os dados filtrados para mostrar todos novamente
             setDropdownVisible(false);
+            setValorUnitario(Number(produto.valor_produto).toFixed(2))
         };
       
     return (
@@ -554,73 +563,91 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
                             <Text style={{ fontSize: 10, alignSelf: 'flex-start', color: arrayProdutos.length ? 'green' : 'red' }}>obrigatório</Text>
                         </View>
                         <View style={[styles.cardPanelContent, {overflow: 'visible'}]}>
-                            <View style={{width:100, flexGrow: 1, zIndex: 10000, borderWidth: 0, flex: 1, overflow: 'visible'}}>
-                                {/* <View style={{zIndex: 10000, borderWidth: 0, flex: 1}}> */}
-                                    {/* Barra de Pesquisa */}
+                            <View style={{flex: 1}}>
+                                <View style={[styles.cardPanelContent, {overflow: 'visible'}]}>
+                                    <View style={{width:100, flexGrow: 1, zIndex: 10000, borderWidth: 0, flex: 1, overflow: 'visible'}}>
+                                        {/* Barra de Pesquisa */}
+                                        <TextInput
+                                            outlineColor='#145B91'
+                                            activeOutlineColor='#145B91'
+                                            mode="outlined"
+                                            style={[styles.input, {marginRight: 0}]}
+                                            label="Pesquisar produtos"
+                                            value={searchText}
+                                            onChangeText={handleSearch}
+                                            onFocus={() => setDropdownVisible(true)}
+                                            disabled={type === ''}
+                                        />
+                                    </View>
+                                    <Text style={[styles.h4, {marginHorizontal: 4,  display: 'flex',  color:'#145B91', alignItems: 'center'}]}>{produto?.unidade_produto??'un'}  </Text>
                                     <TextInput
                                         outlineColor='#145B91'
                                         activeOutlineColor='#145B91'
                                         mode="outlined"
-                                        style={styles.input}
-                                        label="Pesquisar produtos"
-                                        value={searchText}
-                                        onChangeText={handleSearch}
-                                        onFocus={() => setDropdownVisible(true)}
-                                    />
+                                        label="Qtde"
+                                        style={{ marginHorizontal: 5, width: 60, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
+                                        value={quantidadeProdutos}
+                                        keyboardType="numeric"
+                                        onChangeText={handleChangeQuantidade}
+                                        disabled={type === ''}/>
+                                </View>
+                                <View style={[styles.cardPanelContent, {overflow: 'visible'}]}>
+                                    <TextInput
+                                        outlineColor='#145B91'
+                                        activeOutlineColor='#145B91'
+                                        style={{ marginTop: 6, marginHorizontal: 2, flex: 1, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
+                                        value={descontoProdutos}
+                                        onChangeText={handleChangeDesconto}
+                                        mode="outlined"
+                                        label="Desconto"
+                                        keyboardType="numeric"
+                                        disabled={type === ''}/>
+                                    <TextInput
+                                        outlineColor='#145B91'
+                                        activeOutlineColor='#145B91'
+                                        style={{ marginHorizontal: 2, marginTop: 6, flex: 1, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
+                                        value={valorUnitario}
+                                        onChangeText={handleChangeValorUnitario}
+                                        mode="outlined"
+                                        label="Valor unitário"
+                                        keyboardType="numeric"
+                                        disabled={type === ''}/>
+                                </View>
                             </View>
-                            <TextInput
-                                outlineColor='#145B91'
-                                activeOutlineColor='#145B91'
-                                style={{ marginHorizontal: 2, width: 70, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
-                                value={descontoProdutos}
-                                onChangeText={handleChangeDesconto}
-                                mode="outlined"
-                                label="Desconto"
-                                keyboardType="numeric"
-                                disabled={type === ''}/>
-                            <TextInput
-                                outlineColor='#145B91'
-                                activeOutlineColor='#145B91'
-                                mode="outlined"
-                                label="Qtde"
-                                style={{ marginHorizontal: 5, width: 60, backgroundColor: 'white', fontSize: 14, fontFamily: 'Roboto' }}
-                                value={quantidadeProdutos}
-                                keyboardType="numeric"
-                                onChangeText={handleChangeQuantidade}
-                                disabled={type === ''}/>
                             <IconButton
-                                style={{ width: 25 }}
+                                style={{ width: 25, height: '100%' }}
                                 icon="plus-circle"
                                 iconColor='green'
                                 size={25}
                                 onPress={() => adicionarProduto()}
-                                disabled={(produto && quantidadeProdutos) ? false : true} />
+                                disabled={(produto && quantidadeProdutos) ? false : true}
+                            />
                         </View>
                         {arrayProdutos.length ?
                         <View style={styles.viewCardPedido}>
                                     <DataTable>
                                         <DataTable.Header>
-                                            <DataTable.Title style={{ paddingBottom: 0, maxWidth:130 }}>Produtos</DataTable.Title>
-                                            <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 30 }}>Qtd</DataTable.Title>
-                                            <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 40 }}>V. unit.</DataTable.Title>
-                                            <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 35 }}>Desc.</DataTable.Title>
-                                            <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 50 }}>Total</DataTable.Title>
+                                            <DataTable.Title style={{ paddingBottom: 0, flexGrow: 2 }}>Produtos</DataTable.Title>
+                                            <DataTable.Title numeric style={{ justifyContent: 'center', flexGrow: 1 }}>Qtd</DataTable.Title>
+                                            <DataTable.Title numeric style={{ justifyContent: 'center', flexGrow: 1 }}>V. unit.</DataTable.Title>
+                                            <DataTable.Title numeric style={{ justifyContent: 'center', flexGrow: 1 }}>Desc.</DataTable.Title>
+                                            <DataTable.Title numeric style={{ justifyContent: 'center', flexGrow: 1 }}>Total</DataTable.Title>
                                         </DataTable.Header>
                                         {arrayProdutos.map((item, index) => (
                                             <View style={{ display: "flex", justifyContent: "space-between", flexDirection: "row", }}>
                                                 <DataTable.Row key={index} style={{paddingHorizontal: 0, flexGrow: 1}}>
-                                                    <DataTable.Cell style={{ width: 90 }} textStyle={{ fontSize: 11 }}>{item.desc_produto}</DataTable.Cell>
-                                                    <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 30 }} textStyle={{ fontSize: 11 }}>{Number(item.qtde_produto)}</DataTable.Cell>
-                                                    <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 40 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.valor_unit_produto)}`}</DataTable.Cell>
-                                                    <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 35 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.desconto_produto)}`}</DataTable.Cell>
-                                                    <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 50 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.valor_total_produto) - Number(item.desconto_produto)}`}</DataTable.Cell>
+                                                    <DataTable.Cell style={{ flexGrow: 2 }} textStyle={{ fontSize: 11 }}>{item.desc_produto}</DataTable.Cell>
+                                                    <DataTable.Cell style={{ justifyContent: 'center', flexGrow: 1 }} textStyle={{ fontSize: 11 }}>{Number(item.qtde_produto)}</DataTable.Cell>
+                                                    <DataTable.Cell style={{ justifyContent: 'center', flexGrow: 1 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.valor_unit_produto)}`}</DataTable.Cell>
+                                                    <DataTable.Cell style={{ justifyContent: 'center', flexGrow: 1 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.desconto_produto)}`}</DataTable.Cell>
+                                                    <DataTable.Cell style={{ justifyContent: 'center', flexGrow: 1 }} textStyle={{ fontSize: 11 }}>{`R$${(Number(item.valor_total_produto) - Number(item.desconto_produto)).toFixed(2)}`}</DataTable.Cell>
                                                 </DataTable.Row>
                                                 <IconButton
                                                     icon="delete"
                                                     iconColor="red"
                                                     size={25}
                                                     onPress={() => removerProduto(index)}
-                                                    style={{marginLeft: 0, marginRight: 0}}
+                                                    style={{marginLeft: 0, marginRight: 0, width: 15, height: 41}}
                                                 />
                                             </View>
                                         ))}
@@ -633,7 +660,7 @@ const NovoPedido: React.FC<NovoPedidoScreenPorps> = () => {
                             data={filteredData}
                             keyExtractor={(item) => item.id_produto.toString()}
                             renderItem={({ item }) => (
-                            <TouchableOpacity onPress={() => handleSelectClient(item)}>
+                            <TouchableOpacity onPress={() => handleSelectProduto(item)}>
                                 <Text style={styles.dropdownItem}>
                                 {item.desc_produto}
                                 </Text>

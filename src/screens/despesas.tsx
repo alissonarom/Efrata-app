@@ -193,15 +193,18 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                   valor_custo_produto: produto.valor_custo_produto,
                   valor_total_produto: (parseInt(produto.valor_produto) * parseInt(quantidadeProdutos)).toFixed(2),
                   desconto_produto: descontoProdutos,
-                  valor_desconto: ""
+                  valor_desconto: "",
+                  unidade_produto: produto.unidade_produto
               };
               setTotalProdutos(String(parseFloat(totalProdutos || "0") + (parseFloat(quantidadeProdutos || "0") * parseFloat(produto.valor_produto || "0"))));
                 setTotalDescontoProdutos(totalDescontoProdutos + (descontoProdutos ? parseFloat(descontoProdutos): 0));
                 setArrayProdutos((prevArray) => [...prevArray, novoProduto]);
+                console.log('novoProduto', novoProduto)
             }
             setProduto(null); // Reset Picker
             setQuantidadeProdutos('');
             setDescontoProdutos('');
+            setSearchText('')
     };
     const removerProduto = (index: number) => {
         setArrayProdutos((prevArray) => {
@@ -285,6 +288,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                                       onFocus={() => setDropdownVisible(true)}
                                     />
                                 </View>
+                                <Text style={[styles.h4, {marginHorizontal: 4,  display: 'flex',  color:'#145B91', alignItems: 'center'}]}>{produto?.unidade_produto??'un'}</Text>
                                 <TextInput
                                     outlineColor='#145B91'
                                     activeOutlineColor='#145B91'
@@ -306,19 +310,19 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                                 <View style={[styles.viewCardPedido, {paddingVertical:0, paddingLeft:10, paddingRight:0}]}>
                                 <DataTable>
                                     <DataTable.Header>
-                                        <DataTable.Title style={{ paddingBottom: 0, paddingTop: 10, flexGrow:1, paddingRight: 45 }}>Produtos</DataTable.Title>
-                                        <DataTable.Title numeric style={{ paddingBottom: 0, paddingTop: 10, flexGrow:2, paddingRight: 45 }}>Qtd</DataTable.Title>
-                                        {/* <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 40 }}>V. unit.</DataTable.Title>
-                                        <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 35 }}>Desc.</DataTable.Title>
+                                        <DataTable.Title style={{ paddingBottom: 0, paddingTop: 10, flexGrow:1, paddingRight: 85 }}>Produtos</DataTable.Title>
+                                        <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 60 }}>Unidade</DataTable.Title>
+                                        <DataTable.Title numeric style={{ paddingBottom: 0, paddingTop: 10, flexGrow:1, paddingRight: 45 }}>Qtd</DataTable.Title>
+                                        {/* <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 35 }}>Desc.</DataTable.Title>
                                         <DataTable.Title numeric style={{ justifyContent: 'center', maxWidth: 50 }}>Total</DataTable.Title> */}
                                     </DataTable.Header>
                                     {arrayProdutos.map((item, index) => (
                                         <View style={{ display: "flex", justifyContent: "space-between", flexDirection: "row", alignItems:'center', borderBottomColor:'rgba(20, 91, 145, 0.5)', borderBottomWidth: 1}}>
                                             <DataTable.Row key={index} style={{paddingHorizontal: 0, flexGrow: 1}}>
-                                                <DataTable.Cell style={{ width: 90 }} textStyle={{ fontSize: 11 }}>{item.desc_produto}</DataTable.Cell>
-                                                <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 30 }} textStyle={{ fontSize: 11 }}>{Number(item.qtde_produto)}</DataTable.Cell>
-                                                {/* <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 40 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.valor_unit_produto)}`}</DataTable.Cell>
-                                                <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 35 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.desconto_produto)}`}</DataTable.Cell>
+                                                <DataTable.Cell style={{ width: 180 }} textStyle={{ fontSize: 11 }}>{item.desc_produto}</DataTable.Cell>
+                                                <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 80 }} textStyle={{ fontSize: 11 }}>{item.unidade_produto}</DataTable.Cell>
+                                                <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 60 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.qtde_produto)}`}</DataTable.Cell>
+                                                {/* <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 35 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.desconto_produto)}`}</DataTable.Cell>
                                                 <DataTable.Cell style={{ justifyContent: 'center', maxWidth: 50 }} textStyle={{ fontSize: 11 }}>{`R$${Number(item.valor_total_produto) - Number(item.desconto_produto)}`}</DataTable.Cell> */}
                                             </DataTable.Row>
                                             <IconButton
@@ -326,7 +330,7 @@ export default function Despesas({navigation}:DespesasScreenPorps) {
                                                 iconColor="red"
                                                 size={25}
                                                 onPress={() => removerProduto(index)}
-                                                style={{margin: 0}}
+                                                style={{marginLeft: 0, marginRight: 0, width: 15, height: 41}}
                                             />
                                         </View>
                                     ))}

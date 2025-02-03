@@ -1,6 +1,6 @@
 {
   "name": "new-erp-efrata",
-  "version": "2.6.27",
+  "version": "2.7.27",
   "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start",

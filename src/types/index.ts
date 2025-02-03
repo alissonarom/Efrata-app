@@ -324,7 +324,8 @@ export type TProdutoPedido = {
     id_lote?: number,
     id_almoxarifado?: number,
     info_adicional?: string,
-    valor_desconto?: string
+    valor_desconto?: string,
+    unidade_produto?: string;
 };
 
 // Transportadora
