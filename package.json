@@ -8,11 +8,16 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build": "expo export -p web",
-    "deploy": "netlify deploy --dir dist",
-    "pipeline": "npx expo export -p web&netlify deploy --dir dist"
+    "deploy": "netlify deploy --prod --dir dist",
+    "pipeline": "npm run build && npm run deploy",
+    "prettier": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+    "precommit": "npm run format:check"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-picker/picker": "^2.7.5",
     "@react-navigation/material-top-tabs": "^6.6.14",
     "@react-navigation/native": "^7.0.14",
@@ -36,6 +41,9 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/react": "~18.2.45",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
     "typescript": "~5.3.3"
   },
   "private": true

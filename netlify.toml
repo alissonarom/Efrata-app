@@ -1,41 +1,15 @@
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    X-From = "Netlify"
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Authorization-Token, User, App, Content-Type, Accept"
+
 [[redirects]]
   from = "/api/*"
-  to = "https://api.vhsys.com/v2/:splat"
+  to = "https://cw.vendaerp.com.br/api/request/:splat"
   status = 200
   force = true
-  headers = {X-From = "Netlify"}
+  headers = {Authorization-Token = "23474484fb8c32b15b988dbf91caebbe15c0cefdb99e5b004ca767214262ecf348f463ef7d72b2a2f879f5db7a75369ae5df9ac85bd83b64509ab338a25e40b636ebfdf5eace6f7c7df9cd221f3002589223442f82d3e8a7a47d4bb7ae087a3efe041f2bd5ec0cedc7b9b283476a14aec5a9fbd0839c265b7d1b2b318c4bd71f", User = "alissonmorais.br@gmail.com", App = "API1"}
 
-  [[redirects]]
-  from = "/api/produtos"
-  to = "https://api.vhsys.com/v2/produtos"
-  status = 200
-  force = true
-  headers = {X-From = "Netlify"}
-
-[[redirects]]
-  from = "/api/parcelas"
-  to = "https://api.vhsys.com/v2/pedidos/:id_ped/parcelas"
-  status = 200
-  force = true
-  headers = {X-From = "Netlify"}
-
-[[redirects]]
-  from = "/api/clientes"
-  to = "https://api.vhsys.com/v2/clientes"
-  status = 200
-  force = true
-  headers = {X-From = "Netlify"}
-
-[[redirects]]
-  from = "/api/vendedores"
-  to = "https://api.vhsys.com/v2/vendedores"
-  status = 200
-  force = true
-  headers = {X-From = "Netlify"}
-
-[[redirects]]
-from = "/api/pedidos"
-  to = "https://api.vhsys.com/v2/pedidos"
-  status = 200
-  force = true
-  headers = {X-From = "Netlify"}
